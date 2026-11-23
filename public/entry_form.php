@@ -2,11 +2,8 @@
 
 session_start();
 
-require_once __DIR__
-    . '/../includes/functions.php';
-
-require_once __DIR__
-    . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
 
 requireLogin();
 
@@ -44,12 +41,10 @@ if ($id) {
 
     $stmt->execute([
         'id' => $id,
-        'user_id' =>
-            $_SESSION['user_id']
+        'user_id' => $_SESSION['user_id']
     ]);
 
-    $foundEntry =
-        $stmt->fetch();
+    $foundEntry = $stmt->fetch();
 
 
     if (!$foundEntry) {
@@ -57,20 +52,14 @@ if ($id) {
     }
 
     $entry = $foundEntry;
-
     $isEdit = true;
 }
 
 
-if (
-    $_SERVER['REQUEST_METHOD']
-    === 'POST'
-) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $entryType =
-        $_POST[
-            'entry_type'
-        ] ?? '';
+        $_POST['entry_type'] ?? '';
 
     $title =
         trim(
@@ -79,33 +68,23 @@ if (
 
     $organization =
         trim(
-            $_POST[
-                'organization'
-            ] ?? ''
+            $_POST['organization'] ?? ''
         );
 
     $startDate =
-        $_POST[
-            'start_date'
-        ] ?? '';
+        $_POST['start_date'] ?? '';
 
     $endDate =
-        $_POST[
-            'end_date'
-        ] ?? '';
+        $_POST['end_date'] ?? '';
 
     $description =
         trim(
-            $_POST[
-                'description'
-            ] ?? ''
+            $_POST['description'] ?? ''
         );
 
     $githubUrl =
         trim(
-            $_POST[
-                'github_url'
-            ] ?? ''
+            $_POST['github_url'] ?? ''
         );
 
 
@@ -132,29 +111,24 @@ if (
         $error =
             'Title is required.';
 
-    } elseif (
-        $organization === ''
-    ) {
+    } elseif ($organization === '') {
 
         $error =
             'Organization is required.';
 
-    } elseif (
-        $startDate === ''
-    ) {
+    } elseif ($startDate === '') {
 
         $error =
             'Start date is required.';
 
-    } elseif (
-        $description === ''
-    ) {
+    } elseif ($description === '') {
 
         $error =
             'Description is required.';
 
     } elseif (
-        $githubUrl !== ''
+        $entryType === 'project'
+        && $githubUrl !== ''
         && !filter_var(
             $githubUrl,
             FILTER_VALIDATE_URL
@@ -162,7 +136,7 @@ if (
     ) {
 
         $error =
-            'Please enter a valid URL.';
+            'Please enter a valid GitHub URL.';
 
     } elseif (
         $endDate !== ''
@@ -179,10 +153,15 @@ if (
                 ? $endDate
                 : null;
 
-        $githubUrl =
-            $githubUrl !== ''
-                ? $githubUrl
-                : null;
+
+        if ($entryType !== 'project') {
+            $githubUrl = null;
+        } else {
+            $githubUrl =
+                $githubUrl !== ''
+                    ? $githubUrl
+                    : null;
+        }
 
 
         if ($isEdit) {
@@ -190,61 +169,33 @@ if (
             $stmt = $pdo->prepare(
                 "UPDATE resume_entries
                  SET
-                     entry_type =
-                         :entry_type,
-                     title =
-                         :title,
-                     organization =
-                         :organization,
-                     start_date =
-                         :start_date,
-                     end_date =
-                         :end_date,
-                     description =
-                         :description,
-                     github_url =
-                         :github_url
+                    entry_type = :entry_type,
+                    title = :title,
+                    organization = :organization,
+                    start_date = :start_date,
+                    end_date = :end_date,
+                    description = :description,
+                    github_url = :github_url
                  WHERE id = :id
-                 AND user_id =
-                     :user_id"
+                 AND user_id = :user_id"
             );
 
             $stmt->execute([
-                'entry_type' =>
-                    $entryType,
-
-                'title' =>
-                    $title,
-
-                'organization' =>
-                    $organization,
-
-                'start_date' =>
-                    $startDate,
-
-                'end_date' =>
-                    $endDate,
-
-                'description' =>
-                    $description,
-
-                'github_url' =>
-                    $githubUrl,
-
-                'id' =>
-                    $id,
-
-                'user_id' =>
-                    $_SESSION[
-                        'user_id'
-                    ]
+                'entry_type' => $entryType,
+                'title' => $title,
+                'organization' => $organization,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'description' => $description,
+                'github_url' => $githubUrl,
+                'id' => $id,
+                'user_id' => $_SESSION['user_id']
             ]);
 
         } else {
 
             $stmt = $pdo->prepare(
-                "INSERT INTO
-                    resume_entries
+                "INSERT INTO resume_entries
                 (
                     user_id,
                     entry_type,
@@ -269,64 +220,31 @@ if (
             );
 
             $stmt->execute([
-                'user_id' =>
-                    $_SESSION[
-                        'user_id'
-                    ],
-
-                'entry_type' =>
-                    $entryType,
-
-                'title' =>
-                    $title,
-
-                'organization' =>
-                    $organization,
-
-                'start_date' =>
-                    $startDate,
-
-                'end_date' =>
-                    $endDate,
-
-                'description' =>
-                    $description,
-
-                'github_url' =>
-                    $githubUrl
+                'user_id' => $_SESSION['user_id'],
+                'entry_type' => $entryType,
+                'title' => $title,
+                'organization' => $organization,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'description' => $description,
+                'github_url' => $githubUrl
             ]);
         }
 
 
-        header(
-            'Location: admin.php'
-        );
-
+        header('Location: admin.php');
         exit;
     }
 
 
     $entry = [
-        'entry_type' =>
-            $entryType,
-
-        'title' =>
-            $title,
-
-        'organization' =>
-            $organization,
-
-        'start_date' =>
-            $startDate,
-
-        'end_date' =>
-            $endDate ?? '',
-
-        'description' =>
-            $description,
-
-        'github_url' =>
-            $githubUrl ?? ''
+        'entry_type' => $entryType,
+        'title' => $title,
+        'organization' => $organization,
+        'start_date' => $startDate,
+        'end_date' => $endDate ?? '',
+        'description' => $description,
+        'github_url' => $githubUrl ?? ''
     ];
 }
 
@@ -337,8 +255,7 @@ $pageTitle =
         : 'Add New Entry';
 
 
-require_once __DIR__
-    . '/../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 
 ?>
 
@@ -348,20 +265,18 @@ require_once __DIR__
 <section>
 
 <h2 class="sec-title">
-
     <?= $isEdit
         ? 'Edit Entry'
         : 'Add New Entry'
     ?>
-
 </h2>
 
 
 <?php if ($error !== ''): ?>
 
-<p class="message error">
-    <?= escape($error) ?>
-</p>
+    <p class="message error">
+        <?= escape($error) ?>
+    </p>
 
 <?php endif; ?>
 
@@ -374,169 +289,173 @@ require_once __DIR__
 
 <div>
 
-<label for="entry_type">
-    Entry Type
-</label>
+    <label for="entry_type">
+        Entry Type
+    </label>
 
-<select
-    id="entry_type"
-    name="entry_type"
-    required
->
+    <select
+        id="entry_type"
+        name="entry_type"
+        required
+    >
 
-<option
-    value="experience"
-    <?= $entry['entry_type']
-        === 'experience'
-        ? 'selected'
-        : ''
-    ?>
->
-    Experience
-</option>
+        <option
+            value="experience"
+            <?= $entry['entry_type'] === 'experience'
+                ? 'selected'
+                : ''
+            ?>
+        >
+            Experience
+        </option>
 
-<option
-    value="education"
-    <?= $entry['entry_type']
-        === 'education'
-        ? 'selected'
-        : ''
-    ?>
->
-    Education
-</option>
+        <option
+            value="education"
+            <?= $entry['entry_type'] === 'education'
+                ? 'selected'
+                : ''
+            ?>
+        >
+            Education
+        </option>
 
-<option
-    value="project"
-    <?= $entry['entry_type']
-        === 'project'
-        ? 'selected'
-        : ''
-    ?>
->
-    Project
-</option>
+        <option
+            value="project"
+            <?= $entry['entry_type'] === 'project'
+                ? 'selected'
+                : ''
+            ?>
+        >
+            Project
+        </option>
 
-</select>
+    </select>
 
 </div>
 
 
 <div>
 
-<label for="title">
-    Title
-</label>
+    <label
+        for="title"
+        id="title-label"
+    >
+        Job Title
+    </label>
 
-<input
-    type="text"
-    id="title"
-    name="title"
-    value="<?= escape(
-        $entry['title']
-    ) ?>"
-    required
->
-
-</div>
-
-
-<div>
-
-<label for="organization">
-    Organization
-</label>
-
-<input
-    type="text"
-    id="organization"
-    name="organization"
-    value="<?= escape(
-        $entry[
-            'organization'
-        ]
-    ) ?>"
-    required
->
+    <input
+        type="text"
+        id="title"
+        name="title"
+        value="<?= escape(
+            $entry['title']
+        ) ?>"
+        required
+    >
 
 </div>
 
 
 <div>
 
-<label for="start_date">
-    Start Date
-</label>
+    <label
+        for="organization"
+        id="organization-label"
+    >
+        Company / Organization
+    </label>
 
-<input
-    type="date"
-    id="start_date"
-    name="start_date"
-    value="<?= escape(
-        $entry[
-            'start_date'
-        ]
-    ) ?>"
-    required
->
-
-</div>
-
-
-<div>
-
-<label for="end_date">
-    End Date
-</label>
-
-<input
-    type="date"
-    id="end_date"
-    name="end_date"
-    value="<?= escape(
-        $entry[
-            'end_date'
-        ] ?? ''
-    ) ?>"
->
+    <input
+        type="text"
+        id="organization"
+        name="organization"
+        value="<?= escape(
+            $entry['organization']
+        ) ?>"
+        required
+    >
 
 </div>
 
 
 <div>
 
-<label for="description">
-    Description
-</label>
+    <label
+        for="start_date"
+        id="start-date-label"
+    >
+        Start Date
+    </label>
 
-<textarea
-    id="description"
-    name="description"
-    rows="6"
-    required
-><?= escape(
-    $entry['description']
-) ?></textarea>
+    <input
+        type="date"
+        id="start_date"
+        name="start_date"
+        value="<?= escape(
+            $entry['start_date']
+        ) ?>"
+        required
+    >
 
 </div>
 
 
 <div>
 
-<label for="github_url">
-    GitHub URL
-</label>
+    <label
+        for="end_date"
+        id="end-date-label"
+    >
+        End Date
+    </label>
 
-<input
-    type="url"
-    id="github_url"
-    name="github_url"
-    value="<?= escape(
-        $entry[
-            'github_url'
-        ] ?? ''
-    ) ?>"
->
+    <input
+        type="date"
+        id="end_date"
+        name="end_date"
+        value="<?= escape(
+            $entry['end_date'] ?? ''
+        ) ?>"
+    >
+
+</div>
+
+
+<div>
+
+    <label
+        for="description"
+        id="description-label"
+    >
+        Responsibilities / Description
+    </label>
+
+    <textarea
+        id="description"
+        name="description"
+        rows="6"
+        required
+    ><?= escape(
+        $entry['description']
+    ) ?></textarea>
+
+</div>
+
+
+<div id="github-field">
+
+    <label for="github_url">
+        GitHub URL
+    </label>
+
+    <input
+        type="url"
+        id="github_url"
+        name="github_url"
+        value="<?= escape(
+            $entry['github_url'] ?? ''
+        ) ?>"
+    >
 
 </div>
 
@@ -566,9 +485,134 @@ require_once __DIR__
 </main>
 
 
+<script>
+
+const entryType =
+    document.getElementById(
+        'entry_type'
+    );
+
+const titleLabel =
+    document.getElementById(
+        'title-label'
+    );
+
+const organizationLabel =
+    document.getElementById(
+        'organization-label'
+    );
+
+const descriptionLabel =
+    document.getElementById(
+        'description-label'
+    );
+
+const titleInput =
+    document.getElementById(
+        'title'
+    );
+
+const organizationInput =
+    document.getElementById(
+        'organization'
+    );
+
+const githubField =
+    document.getElementById(
+        'github-field'
+    );
+
+
+function updateEntryForm() {
+
+    const type =
+        entryType.value;
+
+
+    if (type === 'experience') {
+
+        titleLabel.textContent =
+            'Job Title';
+
+        organizationLabel.textContent =
+            'Company / Organization';
+
+        descriptionLabel.textContent =
+            'Responsibilities / Description';
+
+        titleInput.placeholder =
+            'Example: Web Development Intern';
+
+        organizationInput.placeholder =
+            'Example: Example Tech Company';
+
+        githubField.style.display =
+            'none';
+
+    }
+
+
+    if (type === 'education') {
+
+        titleLabel.textContent =
+            'Degree / Program';
+
+        organizationLabel.textContent =
+            'School / University';
+
+        descriptionLabel.textContent =
+            'Study Details / Description';
+
+        titleInput.placeholder =
+            'Example: B.Sc. Intelligence Computing';
+
+        organizationInput.placeholder =
+            'Example: Dong-eui University';
+
+        githubField.style.display =
+            'none';
+
+    }
+
+
+    if (type === 'project') {
+
+        titleLabel.textContent =
+            'Project Name';
+
+        organizationLabel.textContent =
+            'Technologies / Institution';
+
+        descriptionLabel.textContent =
+            'Project Description';
+
+        titleInput.placeholder =
+            'Example: Campus Lost & Found System';
+
+        organizationInput.placeholder =
+            'Example: PHP & MySQL | Dong-eui University';
+
+        githubField.style.display =
+            'block';
+
+    }
+
+}
+
+
+entryType.addEventListener(
+    'change',
+    updateEntryForm
+);
+
+
+updateEntryForm();
+
+</script>
+
+
 <?php
 
-require_once __DIR__
-    . '/../includes/footer.php';
+require_once __DIR__ . '/../includes/footer.php';
 
 ?>

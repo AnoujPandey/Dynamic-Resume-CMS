@@ -1,7 +1,15 @@
 <footer>
-    <p>&copy; 2026 @AnoujPandey. All rights reserved.</p>
+
+    <p>
+        &copy;
+        <?= date('Y') ?>
+        @AnoujPandey
+    </p>
+
 </footer>
 
 </div>
+
 </body>
+
 </html>

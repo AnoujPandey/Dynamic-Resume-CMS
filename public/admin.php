@@ -1,18 +1,26 @@
 <?php
 
-require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../config/database.php';
+session_start();
+
+require_once __DIR__
+    . '/../includes/functions.php';
+
+require_once __DIR__
+    . '/../config/database.php';
 
 requireLogin();
+
 
 $message = '';
 $error = '';
 
-// Get logged-in user profile
+
+// Get logged-in profile
 $stmt = $pdo->prepare(
     "SELECT *
      FROM users
-     WHERE id = :id"
+     WHERE id = :id
+     LIMIT 1"
 );
 
 $stmt->execute([
@@ -21,32 +29,70 @@ $stmt->execute([
 
 $user = $stmt->fetch();
 
+
 if (!$user) {
     die('User profile not found.');
 }
 
-// Handle profile update
+
+// Update profile
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_POST['update_profile'])
 ) {
-    $fullName = trim($_POST['full_name'] ?? '');
-    $headline = trim($_POST['headline'] ?? '');
-    $summary = trim($_POST['summary'] ?? '');
-    $email = trim($_POST['email'] ?? '');
+
+    $fullName =
+        trim(
+            $_POST['full_name'] ?? ''
+        );
+
+    $headline =
+        trim(
+            $_POST['headline'] ?? ''
+        );
+
+    $summary =
+        trim(
+            $_POST['summary'] ?? ''
+        );
+
+    $email =
+        trim(
+            $_POST['email'] ?? ''
+        );
+
 
     if ($fullName === '') {
-        $error = 'Full name is required.';
+
+        $error =
+            'Full name is required.';
+
     } elseif ($headline === '') {
-        $error = 'Headline is required.';
+
+        $error =
+            'Headline is required.';
+
     } elseif ($summary === '') {
-        $error = 'Summary is required.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Please enter a valid email address.';
+
+        $error =
+            'Summary is required.';
+
+    } elseif (
+        !filter_var(
+            $email,
+            FILTER_VALIDATE_EMAIL
+        )
+    ) {
+
+        $error =
+            'Please enter a valid email address.';
+
     } else {
+
         $stmt = $pdo->prepare(
             "UPDATE users
-             SET full_name = :full_name,
+             SET
+                 full_name = :full_name,
                  headline = :headline,
                  summary = :summary,
                  email = :email
@@ -58,173 +104,82 @@ if (
             'headline' => $headline,
             'summary' => $summary,
             'email' => $email,
-            'id' => $_SESSION['user_id']
+            'id' => $_SESSION[
+                'user_id'
+            ]
         ]);
 
-        $user['full_name'] = $fullName;
-        $user['headline'] = $headline;
-        $user['summary'] = $summary;
-        $user['email'] = $email;
 
-        $_SESSION['full_name'] = $fullName;
+        $user['full_name'] =
+            $fullName;
 
-        $message = 'Profile updated successfully!';
+        $user['headline'] =
+            $headline;
+
+        $user['summary'] =
+            $summary;
+
+        $user['email'] =
+            $email;
+
+        $_SESSION['full_name'] =
+            $fullName;
+
+
+        $message =
+            'Profile updated successfully!';
     }
 }
 
-// Handle avatar upload
+
+// Upload avatar
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_POST['upload_avatar'])
-    && isset($_FILES['avatar'])
 ) {
-    $file = $_FILES['avatar'];
 
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        $error = 'Please select a valid image.';
-    } elseif ($file['size'] > 2097152) {
-        $error = 'Image must be smaller than 2 MB.';
-    } elseif (!is_uploaded_file($file['tmp_name'])) {
-        $error = 'Invalid uploaded file.';
-    } else {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-
-        $mimeType = finfo_file(
-            $finfo,
-            $file['tmp_name']
+    $result =
+        processAvatarUpload(
+            $_FILES['avatar'] ?? [],
+            $user['avatar_path']
+                ?? null
         );
 
-        finfo_close($finfo);
 
-        $allowedTypes = [
-            'image/jpeg',
-            'image/png'
-        ];
+    if ($result['success']) {
 
-        if (!in_array($mimeType, $allowedTypes, true)) {
-            $error = 'Only JPEG and PNG images are allowed.';
-        } else {
-            if ($mimeType === 'image/jpeg') {
-                $sourceImage = imagecreatefromjpeg(
-                    $file['tmp_name']
-                );
-            } else {
-                $sourceImage = imagecreatefrompng(
-                    $file['tmp_name']
-                );
-            }
+        $stmt = $pdo->prepare(
+            "UPDATE users
+             SET avatar_path =
+                 :avatar_path
+             WHERE id = :id"
+        );
 
-            if (!$sourceImage) {
-                $error = 'Could not process the image.';
-            } else {
-                $sourceWidth = imagesx($sourceImage);
-                $sourceHeight = imagesy($sourceImage);
+        $stmt->execute([
+            'avatar_path' =>
+                $result['path'],
 
-                // Create a real 150 x 150 thumbnail
-                $thumbnail = imagecreatetruecolor(150, 150);
+            'id' =>
+                $_SESSION[
+                    'user_id'
+                ]
+        ]);
 
-                $cropSize = min(
-                    $sourceWidth,
-                    $sourceHeight
-                );
+        $user['avatar_path'] =
+            $result['path'];
 
-                $sourceX = (int) (
-                    ($sourceWidth - $cropSize) / 2
-                );
+        $message =
+            'Profile image updated successfully!';
 
-                $sourceY = (int) (
-                    ($sourceHeight - $cropSize) / 2
-                );
+    } else {
 
-                imagecopyresampled(
-                    $thumbnail,
-                    $sourceImage,
-                    0,
-                    0,
-                    $sourceX,
-                    $sourceY,
-                    150,
-                    150,
-                    $cropSize,
-                    $cropSize
-                );
-
-                // Safe random filename
-                $filename = bin2hex(
-                    random_bytes(16)
-                ) . '.jpg';
-
-                $uploadDirectory =
-                    __DIR__ . '/../uploads/';
-
-                $fullPath =
-                    $uploadDirectory . $filename;
-
-                if (
-                    imagejpeg(
-                        $thumbnail,
-                        $fullPath,
-                        90
-                    )
-                ) {
-                    // Remove previous uploaded avatar
-                    if (!empty($user['avatar_path'])) {
-                        $oldFile =
-                            __DIR__
-                            . '/../'
-                            . $user['avatar_path'];
-
-                        $uploadRealPath =
-                            realpath($uploadDirectory);
-
-                        $oldRealPath =
-                            realpath($oldFile);
-
-                        if (
-                            $oldRealPath !== false
-                            && $uploadRealPath !== false
-                            && str_starts_with(
-                                $oldRealPath,
-                                $uploadRealPath
-                            )
-                            && is_file($oldFile)
-                        ) {
-                            unlink($oldFile);
-                        }
-                    }
-
-                    $relativePath =
-                        'uploads/' . $filename;
-
-                    $stmt = $pdo->prepare(
-                        "UPDATE users
-                         SET avatar_path = :avatar_path
-                         WHERE id = :id"
-                    );
-
-                    $stmt->execute([
-                        'avatar_path' => $relativePath,
-                        'id' => $_SESSION['user_id']
-                    ]);
-
-                    $user['avatar_path'] =
-                        $relativePath;
-
-                    $message =
-                        'Profile image updated successfully!';
-                } else {
-                    $error =
-                        'Could not save the image.';
-                }
-
-                imagedestroy($sourceImage);
-                imagedestroy($thumbnail);
-            }
-        }
+        $error =
+            $result['error'];
     }
 }
 
-// Get resume entries
+
+// Resume entries
 $stmt = $pdo->prepare(
     "SELECT *
      FROM resume_entries
@@ -233,283 +188,364 @@ $stmt = $pdo->prepare(
 );
 
 $stmt->execute([
-    'user_id' => $_SESSION['user_id']
+    'user_id' =>
+        $_SESSION['user_id']
 ]);
 
-$entries = $stmt->fetchAll();
+$entries =
+    $stmt->fetchAll();
 
-require_once __DIR__ . '/../includes/header.php';
+
+$pageTitle = 'Admin Dashboard';
+
+require_once __DIR__
+    . '/../includes/header.php';
+
 ?>
+
 
 <main>
 
-    <section>
-        <h2 class="sec-title">
-            Admin Dashboard
-        </h2>
 
-        <p>
-            Welcome,
-            <?= escape(
-                $_SESSION['full_name'] ?? 'Admin'
-            ) ?>
-        </p>
+<section>
 
-        <p>
-            <a href="entry_form.php">
-                Add New Entry
-            </a>
-            |
-            <a href="index.php">
-                View Public Resume
-            </a>
-            |
-            <a href="logout.php">
-                Logout
-            </a>
-        </p>
-    </section>
+    <h2 class="sec-title">
+        Admin Dashboard
+    </h2>
 
-    <?php if ($message !== ''): ?>
-        <p>
-            <?= escape($message) ?>
-        </p>
-    <?php endif; ?>
+    <p>
+        Welcome,
+        <?= escape(
+            $_SESSION[
+                'full_name'
+            ] ?? 'Admin'
+        ) ?>
+    </p>
 
-    <?php if ($error !== ''): ?>
-        <p>
-            <?= escape($error) ?>
-        </p>
-    <?php endif; ?>
+    <div class="admin-actions">
 
-    <section>
-        <h2 class="sec-title">
-            Edit Profile
-        </h2>
+        <a href="entry_form.php">
+            Add New Entry
+        </a>
 
-        <form method="POST">
+        <a href="index.php">
+            View Public Resume
+        </a>
 
-            <input
-                type="hidden"
-                name="update_profile"
-                value="1"
-            >
+        <a href="logout.php">
+            Logout
+        </a>
 
-            <div>
-                <label for="full_name">
-                    Full Name
-                </label>
+    </div>
 
-                <input
-                    type="text"
-                    id="full_name"
-                    name="full_name"
-                    value="<?= escape(
-                        $user['full_name']
-                    ) ?>"
-                    required
-                >
-            </div>
+</section>
 
-            <div>
-                <label for="headline">
-                    Headline
-                </label>
 
-                <input
-                    type="text"
-                    id="headline"
-                    name="headline"
-                    value="<?= escape(
-                        $user['headline']
-                    ) ?>"
-                    required
-                >
-            </div>
+<?php if ($message !== ''): ?>
 
-            <div>
-                <label for="email">
-                    Email
-                </label>
+    <p class="message success">
+        <?= escape($message) ?>
+    </p>
 
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="<?= escape(
-                        $user['email']
-                    ) ?>"
-                    required
-                >
-            </div>
+<?php endif; ?>
 
-            <div>
-                <label for="summary">
-                    Summary
-                </label>
 
-                <textarea
-                    id="summary"
-                    name="summary"
-                    rows="5"
-                    required
-                ><?= escape(
-                    $user['summary']
-                ) ?></textarea>
-            </div>
+<?php if ($error !== ''): ?>
 
-            <button type="submit">
-                Update Profile
-            </button>
+    <p class="message error">
+        <?= escape($error) ?>
+    </p>
 
-        </form>
-    </section>
+<?php endif; ?>
 
-    <section>
-        <h2 class="sec-title">
-            Profile Image
-        </h2>
 
-        <?php if (!empty($user['avatar_path'])): ?>
+<section>
 
-            <p>
-                <img
-                    src="../<?= escape(
-                        $user['avatar_path']
-                    ) ?>"
-                    alt="Profile photo"
-                    width="150"
-                    height="150"
-                >
-            </p>
+<h2 class="sec-title">
+    Edit Profile
+</h2>
 
-        <?php endif; ?>
 
-        <form
-            method="POST"
-            enctype="multipart/form-data"
-        >
+<form
+    method="POST"
+    class="cms-form"
+>
 
-            <input
-                type="hidden"
-                name="upload_avatar"
-                value="1"
-            >
+<input
+    type="hidden"
+    name="update_profile"
+    value="1"
+>
 
-            <div>
-                <label for="avatar">
-                    Upload JPEG or PNG
-                </label>
 
-                <input
-                    type="file"
-                    id="avatar"
-                    name="avatar"
-                    accept="image/jpeg,image/png"
-                    required
-                >
-            </div>
+<div>
 
-            <button type="submit">
-                Upload Profile Image
-            </button>
+<label for="full_name">
+    Full Name
+</label>
 
-        </form>
-    </section>
+<input
+    type="text"
+    id="full_name"
+    name="full_name"
+    value="<?= escape(
+        $user['full_name']
+    ) ?>"
+    required
+>
 
-    <section>
-        <h2 class="sec-title">
-            Resume Entries
-        </h2>
+</div>
 
-        <?php if (empty($entries)): ?>
 
-            <p>
-                No resume entries available.
-            </p>
+<div>
 
-        <?php else: ?>
+<label for="headline">
+    Headline
+</label>
 
-            <table>
+<input
+    type="text"
+    id="headline"
+    name="headline"
+    value="<?= escape(
+        $user['headline']
+    ) ?>"
+    required
+>
 
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Title</th>
-                        <th>Organization</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+</div>
 
-                <tbody>
 
-                    <?php foreach ($entries as $entry): ?>
+<div>
 
-                        <tr>
+<label for="email">
+    Email
+</label>
 
-                            <td>
-                                <?= escape(
-                                    $entry['entry_type']
-                                ) ?>
-                            </td>
+<input
+    type="email"
+    id="email"
+    name="email"
+    value="<?= escape(
+        $user['email']
+    ) ?>"
+    required
+>
 
-                            <td>
-                                <?= escape(
-                                    $entry['title']
-                                ) ?>
-                            </td>
+</div>
 
-                            <td>
-                                <?= escape(
-                                    $entry['organization']
-                                ) ?>
-                            </td>
 
-                            <td>
+<div>
 
-                                <a
-                                    href="entry_form.php?id=<?= (int) $entry['id'] ?>"
-                                >
-                                    Edit
-                                </a>
+<label for="summary">
+    Summary
+</label>
 
-                                |
+<textarea
+    id="summary"
+    name="summary"
+    rows="5"
+    required
+><?= escape(
+    $user['summary']
+) ?></textarea>
 
-                                <form
-                                    method="POST"
-                                    action="delete_entry.php"
-                                    style="display:inline;"
-                                    onsubmit="return confirm('Delete this entry?');"
-                                >
+</div>
 
-                                    <input
-                                        type="hidden"
-                                        name="id"
-                                        value="<?= (int) $entry['id'] ?>"
-                                    >
 
-                                    <button type="submit">
-                                        Delete
-                                    </button>
+<button type="submit">
+    Update Profile
+</button>
 
-                                </form>
+</form>
 
-                            </td>
+</section>
 
-                        </tr>
 
-                    <?php endforeach; ?>
+<section>
 
-                </tbody>
+<h2 class="sec-title">
+    Profile Image
+</h2>
 
-            </table>
 
-        <?php endif; ?>
+<?php if (
+    !empty(
+        $user['avatar_path']
+    )
+): ?>
 
-    </section>
+<img
+    class="admin-avatar-preview"
+    src="../<?= escape(
+        $user['avatar_path']
+    ) ?>"
+    alt="Profile photo"
+>
+
+<?php endif; ?>
+
+
+<form
+    method="POST"
+    enctype="multipart/form-data"
+    class="cms-form"
+>
+
+<input
+    type="hidden"
+    name="upload_avatar"
+    value="1"
+>
+
+<div>
+
+<label for="avatar">
+    Upload JPEG or PNG
+</label>
+
+<input
+    type="file"
+    id="avatar"
+    name="avatar"
+    accept="image/jpeg,image/png"
+    required
+>
+
+</div>
+
+
+<button type="submit">
+    Upload Profile Image
+</button>
+
+</form>
+
+</section>
+
+
+<section>
+
+<h2 class="sec-title">
+    Resume Entries
+</h2>
+
+
+<?php if (empty($entries)): ?>
+
+<p>
+    No resume entries available.
+</p>
+
+
+<?php else: ?>
+
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Type</th>
+    <th>Title</th>
+    <th>Organization</th>
+    <th>Actions</th>
+</tr>
+
+</thead>
+
+
+<tbody>
+
+<?php
+foreach ($entries as $entry):
+?>
+
+<tr>
+
+<td>
+    <?= escape(
+        $entry['entry_type']
+    ) ?>
+</td>
+
+<td>
+    <?= escape(
+        $entry['title']
+    ) ?>
+</td>
+
+<td>
+    <?= escape(
+        $entry[
+            'organization'
+        ]
+    ) ?>
+</td>
+
+<td>
+
+<a
+    href="entry_form.php?id=<?= (int)
+        $entry['id']
+    ?>"
+>
+    Edit
+</a>
+
+
+<form
+    method="POST"
+    action="delete_entry.php"
+    class="inline-form"
+    onsubmit="return confirm(
+        'Delete this entry?'
+    );"
+>
+
+<input
+    type="hidden"
+    name="id"
+    value="<?= (int)
+        $entry['id']
+    ?>"
+>
+
+<button
+    type="submit"
+    class="delete-button"
+>
+    Delete
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+<?php endforeach; ?>
+
+</tbody>
+
+</table>
+
+</div>
+
+
+<?php endif; ?>
+
+</section>
+
 
 </main>
 
+
 <?php
-require_once __DIR__ . '/../includes/footer.php';
+
+require_once __DIR__
+    . '/../includes/footer.php';
+
 ?>

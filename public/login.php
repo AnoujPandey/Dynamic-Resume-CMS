@@ -2,53 +2,53 @@
 
 session_start();
 
-require_once __DIR__
-    . '/../config/database.php';
-
-require_once __DIR__
-    . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 
+// Already logged in
 if (!empty($_SESSION['user_id'])) {
+
     header('Location: admin.php');
     exit;
 }
 
 
 $error = '';
+$email = '';
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $email =
-        trim($_POST['email'] ?? '');
+    $email = trim(
+        $_POST['email'] ?? ''
+    );
 
-    $password =
-        $_POST['password'] ?? '';
+    $password = $_POST['password'] ?? '';
 
 
+    // Validate email
     if (
         !filter_var(
             $email,
             FILTER_VALIDATE_EMAIL
         )
     ) {
-        $error =
-            'Please enter a valid email address.';
+
+        $error = 'Please enter a valid email address.';
 
     } elseif ($password === '') {
 
-        $error =
-            'Please enter your password.';
+        $error = 'Please enter your password.';
 
     } else {
 
+        // Find user
         $stmt = $pdo->prepare(
-            "SELECT
-                id,
-                full_name,
-                email,
-                password
+            "SELECT id,
+                    full_name,
+                    email,
+                    password
              FROM users
              WHERE email = :email
              LIMIT 1"
@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch();
 
 
+        // Verify password
         if (
             $user
             && password_verify(
@@ -77,49 +78,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['full_name'] =
                 $user['full_name'];
 
+
             header(
                 'Location: admin.php'
             );
 
             exit;
-        }
 
-        $error =
-            'Invalid email or password.';
+        } else {
+
+            $error =
+                'Invalid email or password.';
+        }
     }
 }
 
 
 $pageTitle = 'Admin Login';
 
-require_once __DIR__
-    . '/../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 
 ?>
 
 
 <main>
 
-<section>
-
-    <h2 class="sec-title">
+    <h1>
         Admin Login
-    </h2>
+    </h1>
+
+
+    <p>
+        Sign in to manage your portfolio.
+    </p>
 
 
     <?php if ($error !== ''): ?>
 
-        <p class="message error">
+        <div class="message error">
 
             <?= escape($error) ?>
 
-        </p>
+        </div>
 
     <?php endif; ?>
 
 
     <form
-        method="POST"
+        method="post"
+        action="login.php"
         class="cms-form"
     >
 
@@ -133,11 +140,7 @@ require_once __DIR__
                 type="email"
                 id="email"
                 name="email"
-                value="<?= escape(
-                    $_POST[
-                        'email'
-                    ] ?? ''
-                ) ?>"
+                value="<?= escape($email) ?>"
                 required
             >
 
@@ -166,14 +169,20 @@ require_once __DIR__
 
     </form>
 
-</section>
+
+    <div class="admin-actions">
+
+        <a href="index.php">
+            ← Back to Portfolio
+        </a>
+
+    </div>
 
 </main>
 
 
 <?php
 
-require_once __DIR__
-    . '/../includes/footer.php';
+require_once __DIR__ . '/../includes/footer.php';
 
 ?>

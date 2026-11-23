@@ -2,37 +2,18 @@
 
 session_start();
 
-require_once __DIR__
-    . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-require_once __DIR__
-    . '/../config/database.php';
 
+// Protect admin page
 requireLogin();
 
 
-$message = '';
+$userId = (int) $_SESSION['user_id'];
+
+$success = '';
 $error = '';
-
-
-// Get logged-in profile
-$stmt = $pdo->prepare(
-    "SELECT *
-     FROM users
-     WHERE id = :id
-     LIMIT 1"
-);
-
-$stmt->execute([
-    'id' => $_SESSION['user_id']
-]);
-
-$user = $stmt->fetch();
-
-
-if (!$user) {
-    die('User profile not found.');
-}
 
 
 // Update profile
@@ -41,41 +22,27 @@ if (
     && isset($_POST['update_profile'])
 ) {
 
-    $fullName =
-        trim(
-            $_POST['full_name'] ?? ''
-        );
+    $fullName = trim(
+        $_POST['full_name'] ?? ''
+    );
 
-    $headline =
-        trim(
-            $_POST['headline'] ?? ''
-        );
+    $headline = trim(
+        $_POST['headline'] ?? ''
+    );
 
-    $summary =
-        trim(
-            $_POST['summary'] ?? ''
-        );
+    $summary = trim(
+        $_POST['summary'] ?? ''
+    );
 
-    $email =
-        trim(
-            $_POST['email'] ?? ''
-        );
+    $email = trim(
+        $_POST['email'] ?? ''
+    );
 
 
     if ($fullName === '') {
 
         $error =
             'Full name is required.';
-
-    } elseif ($headline === '') {
-
-        $error =
-            'Headline is required.';
-
-    } elseif ($summary === '') {
-
-        $error =
-            'Summary is required.';
 
     } elseif (
         !filter_var(
@@ -89,45 +56,37 @@ if (
 
     } else {
 
-        $stmt = $pdo->prepare(
-            "UPDATE users
-             SET
-                 full_name = :full_name,
-                 headline = :headline,
-                 summary = :summary,
-                 email = :email
-             WHERE id = :id"
-        );
+        try {
 
-        $stmt->execute([
-            'full_name' => $fullName,
-            'headline' => $headline,
-            'summary' => $summary,
-            'email' => $email,
-            'id' => $_SESSION[
-                'user_id'
-            ]
-        ]);
+            $stmt = $pdo->prepare(
+                "UPDATE users
+                 SET full_name = :full_name,
+                     headline = :headline,
+                     summary = :summary,
+                     email = :email
+                 WHERE id = :id"
+            );
 
-
-        $user['full_name'] =
-            $fullName;
-
-        $user['headline'] =
-            $headline;
-
-        $user['summary'] =
-            $summary;
-
-        $user['email'] =
-            $email;
-
-        $_SESSION['full_name'] =
-            $fullName;
+            $stmt->execute([
+                'full_name' => $fullName,
+                'headline' => $headline,
+                'summary' => $summary,
+                'email' => $email,
+                'id' => $userId
+            ]);
 
 
-        $message =
-            'Profile updated successfully!';
+            $_SESSION['full_name'] =
+                $fullName;
+
+            $success =
+                'Profile updated successfully.';
+
+        } catch (PDOException $e) {
+
+            $error =
+                'Unable to update profile.';
+        }
     }
 }
 
@@ -138,48 +97,86 @@ if (
     && isset($_POST['upload_avatar'])
 ) {
 
-    $result =
-        processAvatarUpload(
-            $_FILES['avatar'] ?? [],
-            $user['avatar_path']
-                ?? null
-        );
+    // Get current avatar
+    $stmt = $pdo->prepare(
+        "SELECT avatar_path
+         FROM users
+         WHERE id = :id
+         LIMIT 1"
+    );
+
+    $stmt->execute([
+        'id' => $userId
+    ]);
+
+    $currentUser =
+        $stmt->fetch();
 
 
-    if ($result['success']) {
+    $oldAvatar =
+        $currentUser['avatar_path']
+        ?? null;
 
-        $stmt = $pdo->prepare(
-            "UPDATE users
-             SET avatar_path =
-                 :avatar_path
-             WHERE id = :id"
-        );
 
-        $stmt->execute([
-            'avatar_path' =>
-                $result['path'],
+    if (!isset($_FILES['avatar'])) {
 
-            'id' =>
-                $_SESSION[
-                    'user_id'
-                ]
-        ]);
-
-        $user['avatar_path'] =
-            $result['path'];
-
-        $message =
-            'Profile image updated successfully!';
+        $error =
+            'Please choose an image.';
 
     } else {
 
-        $error =
-            $result['error'];
+        $result =
+            processAvatarUpload(
+                $_FILES['avatar'],
+                $oldAvatar
+            );
+
+
+        if ($result['success']) {
+
+            $stmt = $pdo->prepare(
+                "UPDATE users
+                 SET avatar_path = :avatar_path
+                 WHERE id = :id"
+            );
+
+            $stmt->execute([
+                'avatar_path' =>
+                    $result['path'],
+
+                'id' =>
+                    $userId
+            ]);
+
+
+            $success =
+                'Profile image updated successfully.';
+
+        } else {
+
+            $error =
+                $result['error'];
+        }
     }
 }
 
 
-// Resume entries
+// Get profile
+$stmt = $pdo->prepare(
+    "SELECT *
+     FROM users
+     WHERE id = :id
+     LIMIT 1"
+);
+
+$stmt->execute([
+    'id' => $userId
+]);
+
+$user = $stmt->fetch();
+
+
+// Get resume entries
 $stmt = $pdo->prepare(
     "SELECT *
      FROM resume_entries
@@ -188,48 +185,45 @@ $stmt = $pdo->prepare(
 );
 
 $stmt->execute([
-    'user_id' =>
-        $_SESSION['user_id']
+    'user_id' => $userId
 ]);
 
 $entries =
     $stmt->fetchAll();
 
 
-$pageTitle = 'Admin Dashboard';
+$pageTitle =
+    'Admin Dashboard';
 
-require_once __DIR__
-    . '/../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 
 ?>
 
 
 <main>
 
-
-<section>
-
-    <h2 class="sec-title">
+    <h1>
         Admin Dashboard
-    </h2>
+    </h1>
+
 
     <p>
         Welcome,
         <?= escape(
-            $_SESSION[
-                'full_name'
-            ] ?? 'Admin'
-        ) ?>
+            $_SESSION['full_name']
+            ?? 'Admin'
+        ) ?>.
     </p>
+
 
     <div class="admin-actions">
 
-        <a href="entry_form.php">
-            Add New Entry
+        <a href="index.php">
+            View Portfolio
         </a>
 
-        <a href="index.php">
-            View Public Resume
+        <a href="entry_form.php">
+            Add Resume Entry
         </a>
 
         <a href="logout.php">
@@ -238,314 +232,368 @@ require_once __DIR__
 
     </div>
 
-</section>
 
+    <?php if ($success !== ''): ?>
 
-<?php if ($message !== ''): ?>
+        <div class="message success">
 
-    <p class="message success">
-        <?= escape($message) ?>
-    </p>
+            <?= escape($success) ?>
 
-<?php endif; ?>
+        </div>
 
+    <?php endif; ?>
 
-<?php if ($error !== ''): ?>
 
-    <p class="message error">
-        <?= escape($error) ?>
-    </p>
+    <?php if ($error !== ''): ?>
 
-<?php endif; ?>
+        <div class="message error">
 
+            <?= escape($error) ?>
 
-<section>
+        </div>
 
-<h2 class="sec-title">
-    Edit Profile
-</h2>
+    <?php endif; ?>
 
 
-<form
-    method="POST"
-    class="cms-form"
->
+    <section>
 
-<input
-    type="hidden"
-    name="update_profile"
-    value="1"
->
+        <h2>
+            Profile Information
+        </h2>
 
 
-<div>
+        <form
+            method="post"
+            action="admin.php"
+            class="cms-form"
+        >
 
-<label for="full_name">
-    Full Name
-</label>
+            <div>
 
-<input
-    type="text"
-    id="full_name"
-    name="full_name"
-    value="<?= escape(
-        $user['full_name']
-    ) ?>"
-    required
->
+                <label for="full_name">
+                    Full Name
+                </label>
 
-</div>
+                <input
+                    type="text"
+                    id="full_name"
+                    name="full_name"
+                    value="<?= escape(
+                        $user['full_name']
+                    ) ?>"
+                    required
+                >
 
+            </div>
 
-<div>
 
-<label for="headline">
-    Headline
-</label>
+            <div>
 
-<input
-    type="text"
-    id="headline"
-    name="headline"
-    value="<?= escape(
-        $user['headline']
-    ) ?>"
-    required
->
+                <label for="headline">
+                    Headline
+                </label>
 
-</div>
+                <input
+                    type="text"
+                    id="headline"
+                    name="headline"
+                    value="<?= escape(
+                        $user['headline']
+                    ) ?>"
+                >
 
+            </div>
 
-<div>
 
-<label for="email">
-    Email
-</label>
+            <div>
 
-<input
-    type="email"
-    id="email"
-    name="email"
-    value="<?= escape(
-        $user['email']
-    ) ?>"
-    required
->
+                <label for="email">
+                    Email
+                </label>
 
-</div>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="<?= escape(
+                        $user['email']
+                    ) ?>"
+                    required
+                >
 
+            </div>
 
-<div>
 
-<label for="summary">
-    Summary
-</label>
+            <div>
 
-<textarea
-    id="summary"
-    name="summary"
-    rows="5"
-    required
-><?= escape(
-    $user['summary']
-) ?></textarea>
+                <label for="summary">
+                    Career Summary
+                </label>
 
-</div>
+                <textarea
+                    id="summary"
+                    name="summary"
+                    rows="6"
+                ><?= escape(
+                    $user['summary']
+                ) ?></textarea>
 
+            </div>
 
-<button type="submit">
-    Update Profile
-</button>
 
-</form>
+            <button
+                type="submit"
+                name="update_profile"
+            >
+                Update Profile
+            </button>
 
-</section>
+        </form>
 
+    </section>
 
-<section>
 
-<h2 class="sec-title">
-    Profile Image
-</h2>
+    <section>
 
+        <h2>
+            Profile Image
+        </h2>
 
-<?php if (
-    !empty(
-        $user['avatar_path']
-    )
-): ?>
 
-<img
-    class="admin-avatar-preview"
-    src="../<?= escape(
-        $user['avatar_path']
-    ) ?>"
-    alt="Profile photo"
->
+        <?php if (
+            !empty(
+                $user['avatar_path']
+            )
+        ): ?>
 
-<?php endif; ?>
+            <img
+                src="../<?= escape(
+                    $user['avatar_path']
+                ) ?>"
+                alt="Current profile image"
+                class="admin-avatar-preview"
+            >
 
+        <?php endif; ?>
 
-<form
-    method="POST"
-    enctype="multipart/form-data"
-    class="cms-form"
->
 
-<input
-    type="hidden"
-    name="upload_avatar"
-    value="1"
->
+        <form
+            method="post"
+            action="admin.php"
+            enctype="multipart/form-data"
+            class="cms-form"
+        >
 
-<div>
+            <div>
 
-<label for="avatar">
-    Upload JPEG or PNG
-</label>
+                <label for="avatar">
+                    Upload JPEG or PNG
+                </label>
 
-<input
-    type="file"
-    id="avatar"
-    name="avatar"
-    accept="image/jpeg,image/png"
-    required
->
+                <input
+                    type="file"
+                    id="avatar"
+                    name="avatar"
+                    accept="image/jpeg,image/png"
+                    required
+                >
 
-</div>
+            </div>
 
 
-<button type="submit">
-    Upload Profile Image
-</button>
+            <button
+                type="submit"
+                name="upload_avatar"
+            >
+                Upload Avatar
+            </button>
 
-</form>
+        </form>
 
-</section>
+    </section>
 
 
-<section>
+    <section>
 
-<h2 class="sec-title">
-    Resume Entries
-</h2>
+        <h2>
+            Resume Entries
+        </h2>
 
 
-<?php if (empty($entries)): ?>
+        <?php if (!empty($entries)): ?>
 
-<p>
-    No resume entries available.
-</p>
 
+            <div class="table-wrap">
 
-<?php else: ?>
+                <table>
 
+                    <thead>
 
-<div class="table-wrap">
+                        <tr>
 
-<table>
+                            <th>
+                                Type
+                            </th>
 
-<thead>
+                            <th>
+                                Title
+                            </th>
 
-<tr>
-    <th>Type</th>
-    <th>Title</th>
-    <th>Organization</th>
-    <th>Actions</th>
-</tr>
+                            <th>
+                                Organization
+                            </th>
 
-</thead>
+                            <th>
+                                Start Date
+                            </th>
 
+                            <th>
+                                End Date
+                            </th>
 
-<tbody>
+                            <th>
+                                Actions
+                            </th>
 
-<?php
-foreach ($entries as $entry):
-?>
+                        </tr>
 
-<tr>
+                    </thead>
 
-<td>
-    <?= escape(
-        $entry['entry_type']
-    ) ?>
-</td>
 
-<td>
-    <?= escape(
-        $entry['title']
-    ) ?>
-</td>
+                    <tbody>
 
-<td>
-    <?= escape(
-        $entry[
-            'organization'
-        ]
-    ) ?>
-</td>
 
-<td>
+                    <?php foreach (
+                        $entries
+                        as $entry
+                    ): ?>
 
-<a
-    href="entry_form.php?id=<?= (int)
-        $entry['id']
-    ?>"
->
-    Edit
-</a>
 
+                        <tr>
 
-<form
-    method="POST"
-    action="delete_entry.php"
-    class="inline-form"
-    onsubmit="return confirm(
-        'Delete this entry?'
-    );"
->
+                            <td>
 
-<input
-    type="hidden"
-    name="id"
-    value="<?= (int)
-        $entry['id']
-    ?>"
->
+                                <?= escape(
+                                    ucfirst(
+                                        $entry['entry_type']
+                                    )
+                                ) ?>
 
-<button
-    type="submit"
-    class="delete-button"
->
-    Delete
-</button>
+                            </td>
 
-</form>
 
-</td>
+                            <td>
 
-</tr>
+                                <?= escape(
+                                    $entry['title']
+                                ) ?>
 
-<?php endforeach; ?>
+                            </td>
 
-</tbody>
 
-</table>
+                            <td>
 
-</div>
+                                <?= escape(
+                                    $entry['organization']
+                                ) ?>
 
+                            </td>
 
-<?php endif; ?>
 
-</section>
+                            <td>
 
+                                <?= escape(
+                                    $entry['start_date']
+                                ) ?>
+
+                            </td>
+
+
+                            <td>
+
+                                <?= !empty(
+                                    $entry['end_date']
+                                )
+                                    ? escape(
+                                        $entry['end_date']
+                                    )
+                                    : 'Present'
+                                ?>
+
+                            </td>
+
+
+                            <td>
+
+                                <a
+                                    href="entry_form.php?id=<?= (int) $entry['id'] ?>"
+                                >
+                                    Edit
+                                </a>
+
+
+                                <form
+                                    method="post"
+                                    action="delete_entry.php"
+                                    class="inline-form"
+                                    onsubmit="return confirm('Are you sure you want to delete this entry?');"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="id"
+                                        value="<?= (int) $entry['id'] ?>"
+                                    >
+
+
+                                    <button
+                                        type="submit"
+                                        class="delete-button"
+                                    >
+                                        Delete
+                                    </button>
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+
+                    <?php endforeach; ?>
+
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+        <?php else: ?>
+
+            <p class="empty-state">
+                No resume entries available yet.
+            </p>
+
+        <?php endif; ?>
+
+
+        <div class="admin-actions">
+
+            <a href="entry_form.php">
+                Add New Entry
+            </a>
+
+        </div>
+
+    </section>
 
 </main>
 
 
 <?php
 
-require_once __DIR__
-    . '/../includes/footer.php';
+require_once __DIR__ . '/../includes/footer.php';
 
 ?>

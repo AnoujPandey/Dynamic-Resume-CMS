@@ -1,15 +1,16 @@
 <?php
 
-require_once __DIR__
-    . '/../config/database.php';
+session_start();
 
-require_once __DIR__
-    . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 
-// Get the profile using a parameterized query
+// Public profile owner
 $profileId = 1;
 
+
+// Get profile
 $stmt = $pdo->prepare(
     "SELECT *
      FROM users
@@ -27,8 +28,10 @@ $user = $stmt->fetch();
 $entries = [];
 $skills = [];
 
+
 if ($user) {
 
+    // Get resume entries
     $stmt = $pdo->prepare(
         "SELECT *
          FROM resume_entries
@@ -43,6 +46,7 @@ if ($user) {
     $entries = $stmt->fetchAll();
 
 
+    // Get technical skills
     $stmt = $pdo->prepare(
         "SELECT *
          FROM skills
@@ -59,28 +63,25 @@ if ($user) {
 
 
 $pageTitle = $user
-    ? $user['full_name']
-        . ' - Dynamic Resume'
-    : 'Dynamic Resume';
+    ? $user['full_name'] . ' - Portfolio Resume'
+    : 'Portfolio Resume';
 
-require_once __DIR__
-    . '/../includes/header.php';
+
+require_once __DIR__ . '/../includes/header.php';
 
 ?>
 
 
 <?php if ($user): ?>
 
-<header>
+
+<header class="resume-header">
 
     <div class="avatar-wrap">
 
         <img
             src="<?= !empty($user['avatar_path'])
-                ? '../'
-                    . escape(
-                        $user['avatar_path']
-                    )
+                ? '../' . escape($user['avatar_path'])
                 : '../my.jpeg'
             ?>"
             alt="Profile photo"
@@ -91,30 +92,48 @@ require_once __DIR__
 
     <div class="header-body">
 
+        <div class="role-tag">
+
+            <span class="dot-live"></span>
+
+            Open to Internships &amp; Opportunities
+
+        </div>
+
+
         <h1>
-            <?= escape(
-                $user['full_name']
-            ) ?>
+            <?= escape($user['full_name']) ?>
         </h1>
 
-        <p>
-            <?= escape(
-                $user['headline']
-            ) ?>
+
+        <p class="headline">
+            <?= escape($user['headline']) ?>
         </p>
+
 
         <div class="contact-grid">
 
             <a
                 class="contact-pill"
-                href="mailto:<?= escape(
-                    $user['email']
-                ) ?>"
+                href="mailto:<?= escape($user['email']) ?>"
             >
-                <?= escape(
-                    $user['email']
-                ) ?>
+                <?= escape($user['email']) ?>
             </a>
+
+
+            <a
+                class="contact-pill"
+                href="https://www.deu.ac.kr"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Dong-eui University
+            </a>
+
+
+            <span class="contact-pill">
+                Busan, South Korea
+            </span>
 
         </div>
 
@@ -123,10 +142,10 @@ require_once __DIR__
 </header>
 
 
-<nav>
+<nav class="resume-nav">
 
     <a href="#objective">
-        Objective
+        Portfolio
     </a>
 
     <a href="#education">
@@ -145,12 +164,213 @@ require_once __DIR__
         Skills
     </a>
 
+
+    <?php if (!empty($_SESSION['user_id'])): ?>
+
+        <a
+            href="admin.php"
+            class="admin-link"
+        >
+            Admin Dashboard
+        </a>
+
+    <?php else: ?>
+
+        <a
+            href="login.php"
+            class="admin-link"
+        >
+            Admin Login
+        </a>
+
+    <?php endif; ?>
+
 </nav>
 
 
 <div class="layout">
 
-<main>
+
+<aside class="resume-sidebar">
+
+
+    <div
+        class="side-block"
+        id="skills"
+    >
+
+        <div class="side-heading">
+            Technical Skills
+        </div>
+
+
+        <?php if (!empty($skills)): ?>
+
+            <?php foreach ($skills as $skill): ?>
+
+                <?php
+
+                $level = max(
+                    0,
+                    min(
+                        100,
+                        (int) $skill['skill_level']
+                    )
+                );
+
+                ?>
+
+                <div class="s-skill">
+
+                    <div class="s-skill-top">
+
+                        <?= escape(
+                            $skill['skill_name']
+                        ) ?>
+
+                        <span>
+                            <?= $level ?>%
+                        </span>
+
+                    </div>
+
+
+                    <div class="s-bar">
+
+                        <div
+                            class="s-bar-fill"
+                            style="width: <?= $level ?>%;"
+                        >
+                        </div>
+
+                    </div>
+
+                </div>
+
+            <?php endforeach; ?>
+
+
+        <?php else: ?>
+
+            <p class="sidebar-empty">
+                No technical skills added yet.
+            </p>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="side-block">
+
+        <div class="side-heading">
+            Languages
+        </div>
+
+
+        <div class="lang-row">
+
+            <span>Nepali</span>
+
+            <span class="language-level">
+                Native
+            </span>
+
+        </div>
+
+
+        <div class="lang-row">
+
+            <span>English</span>
+
+            <span class="language-level">
+                Good
+            </span>
+
+        </div>
+
+
+        <div class="lang-row">
+
+            <span>Korean</span>
+
+            <span class="language-level">
+                Basic
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="side-block">
+
+        <div class="side-heading">
+            Soft Skills
+        </div>
+
+
+        <div class="tag-cloud">
+
+            <span class="tag">
+                Team Player
+            </span>
+
+            <span class="tag">
+                Problem Solving
+            </span>
+
+            <span class="tag">
+                Time Management
+            </span>
+
+            <span class="tag">
+                Adaptable
+            </span>
+
+            <span class="tag">
+                Detail-Oriented
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="side-block">
+
+        <div class="side-heading">
+            Interests
+        </div>
+
+
+        <div class="tag-cloud">
+
+            <span class="tag">
+                Web Development
+            </span>
+
+            <span class="tag">
+                Data Analysis
+            </span>
+
+            <span class="tag">
+                Mathematics
+            </span>
+
+            <span class="tag">
+                Graphic Design
+            </span>
+
+        </div>
+
+    </div>
+
+
+</aside>
+
+
+<main class="resume-main">
 
 
 <section id="objective">
@@ -159,12 +379,11 @@ require_once __DIR__
         Career Objective
     </h2>
 
+
     <div class="objective-card">
 
         <?= nl2br(
-            escape(
-                $user['summary']
-            )
+            escape($user['summary'])
         ) ?>
 
     </div>
@@ -178,6 +397,7 @@ require_once __DIR__
         Education
     </h2>
 
+
     <div class="timeline">
 
         <?php
@@ -186,10 +406,7 @@ require_once __DIR__
 
         foreach ($entries as $entry):
 
-            if (
-                $entry['entry_type']
-                !== 'education'
-            ) {
+            if ($entry['entry_type'] !== 'education') {
                 continue;
             }
 
@@ -197,83 +414,79 @@ require_once __DIR__
 
         ?>
 
-        <div class="tl-item">
 
-            <div class="tl-top">
+            <article class="tl-item">
 
-                <span class="tl-inst">
+                <div class="tl-top">
 
-                    <?= escape(
-                        $entry[
-                            'organization'
-                        ]
-                    ) ?>
+                    <span class="tl-inst">
 
-                </span>
+                        <?= escape(
+                            $entry['organization']
+                        ) ?>
 
-                <span class="tl-date">
+                    </span>
 
-                    <?= escape(
-                        date(
-                            'Y',
-                            strtotime(
-                                $entry[
-                                    'start_date'
-                                ]
-                            )
-                        )
-                    ) ?>
 
-                    –
+                    <span class="tl-date">
 
-                    <?= $entry['end_date']
-                        ? escape(
+                        <?= escape(
                             date(
                                 'Y',
                                 strtotime(
-                                    $entry[
-                                        'end_date'
-                                    ]
+                                    $entry['start_date']
                                 )
                             )
+                        ) ?>
+
+                        –
+
+                        <?= !empty($entry['end_date'])
+                            ? escape(
+                                date(
+                                    'Y',
+                                    strtotime(
+                                        $entry['end_date']
+                                    )
+                                )
+                            )
+                            : 'Present'
+                        ?>
+
+                    </span>
+
+                </div>
+
+
+                <div class="tl-prog">
+
+                    <?= escape(
+                        $entry['title']
+                    ) ?>
+
+                </div>
+
+
+                <p>
+
+                    <?= nl2br(
+                        escape(
+                            $entry['description']
                         )
-                        : 'Present'
-                    ?>
+                    ) ?>
 
-                </span>
+                </p>
 
-            </div>
+            </article>
 
-            <div class="tl-prog">
-
-                <?= escape(
-                    $entry['title']
-                ) ?>
-
-            </div>
-
-            <p>
-
-                <?= nl2br(
-                    escape(
-                        $entry[
-                            'description'
-                        ]
-                    )
-                ) ?>
-
-            </p>
-
-        </div>
 
         <?php endforeach; ?>
 
 
         <?php if (!$hasEducation): ?>
 
-            <p>
-                No education records
-                available yet.
+            <p class="empty-state">
+                No education records available yet.
             </p>
 
         <?php endif; ?>
@@ -289,16 +502,14 @@ require_once __DIR__
         Work Experience
     </h2>
 
+
     <?php
 
     $hasExperience = false;
 
     foreach ($entries as $entry):
 
-        if (
-            $entry['entry_type']
-            !== 'experience'
-        ) {
+        if ($entry['entry_type'] !== 'experience') {
             continue;
         }
 
@@ -306,83 +517,79 @@ require_once __DIR__
 
     ?>
 
-    <div class="exp-card">
 
-        <div class="exp-top">
+        <article class="exp-card">
 
-            <span class="exp-title">
+            <div class="exp-top">
 
-                <?= escape(
-                    $entry['title']
-                ) ?>
+                <span class="exp-title">
 
-            </span>
+                    <?= escape(
+                        $entry['title']
+                    ) ?>
 
-            <span class="exp-date-badge">
+                </span>
 
-                <?= escape(
-                    date(
-                        'M Y',
-                        strtotime(
-                            $entry[
-                                'start_date'
-                            ]
-                        )
-                    )
-                ) ?>
 
-                –
+                <span class="exp-date-badge">
 
-                <?= $entry['end_date']
-                    ? escape(
+                    <?= escape(
                         date(
                             'M Y',
                             strtotime(
-                                $entry[
-                                    'end_date'
-                                ]
+                                $entry['start_date']
                             )
                         )
+                    ) ?>
+
+                    –
+
+                    <?= !empty($entry['end_date'])
+                        ? escape(
+                            date(
+                                'M Y',
+                                strtotime(
+                                    $entry['end_date']
+                                )
+                            )
+                        )
+                        : 'Present'
+                    ?>
+
+                </span>
+
+            </div>
+
+
+            <p class="exp-org">
+
+                <?= escape(
+                    $entry['organization']
+                ) ?>
+
+            </p>
+
+
+            <p>
+
+                <?= nl2br(
+                    escape(
+                        $entry['description']
                     )
-                    : 'Present'
-                ?>
+                ) ?>
 
-            </span>
+            </p>
 
-        </div>
+        </article>
 
-        <p class="exp-org">
-
-            <?= escape(
-                $entry[
-                    'organization'
-                ]
-            ) ?>
-
-        </p>
-
-        <p>
-
-            <?= nl2br(
-                escape(
-                    $entry[
-                        'description'
-                    ]
-                )
-            ) ?>
-
-        </p>
-
-    </div>
 
     <?php endforeach; ?>
 
 
     <?php if (!$hasExperience): ?>
 
-        <p>
-            No work experience
-            added yet.
+        <p class="empty-state">
+            No work experience added yet.
         </p>
 
     <?php endif; ?>
@@ -393,8 +600,9 @@ require_once __DIR__
 <section id="projects">
 
     <h2 class="sec-title">
-        My Projects
+        Academic Projects
     </h2>
+
 
     <div class="project-grid">
 
@@ -404,10 +612,7 @@ require_once __DIR__
 
         foreach ($entries as $entry):
 
-            if (
-                $entry['entry_type']
-                !== 'project'
-            ) {
+            if ($entry['entry_type'] !== 'project') {
                 continue;
             }
 
@@ -415,60 +620,71 @@ require_once __DIR__
 
         ?>
 
-        <div class="proj-card">
 
-            <h3 class="proj-title">
+            <article class="proj-card">
 
-                <?= escape(
-                    $entry['title']
-                ) ?>
+                <div class="proj-icon">
+                    &lt;/&gt;
+                </div>
 
-            </h3>
 
-            <p class="proj-sub">
+                <h3 class="proj-title">
 
-                <?= escape(
-                    $entry[
-                        'organization'
-                    ]
-                ) ?>
+                    <?= escape(
+                        $entry['title']
+                    ) ?>
 
-            </p>
+                </h3>
 
-            <p>
 
-                <?= nl2br(
-                    escape(
-                        $entry[
-                            'description'
-                        ]
-                    )
-                ) ?>
+                <p class="proj-sub">
 
-            </p>
+                    <?= escape(
+                        $entry['organization']
+                    ) ?>
 
-            <?php if (
-                !empty(
-                    $entry['github_url']
-                )
-            ): ?>
+                    ·
 
-                <a
-                    href="<?= escape(
-                        $entry[
-                            'github_url'
-                        ]
-                    ) ?>"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="github-link"
-                >
-                    View on GitHub ↗
-                </a>
+                    <?= escape(
+                        date(
+                            'Y',
+                            strtotime(
+                                $entry['start_date']
+                            )
+                        )
+                    ) ?>
 
-            <?php endif; ?>
+                </p>
 
-        </div>
+
+                <p class="proj-description">
+
+                    <?= nl2br(
+                        escape(
+                            $entry['description']
+                        )
+                    ) ?>
+
+                </p>
+
+
+                <?php if (!empty($entry['github_url'])): ?>
+
+                    <a
+                        class="github-link"
+                        href="<?= escape(
+                            $entry['github_url']
+                        ) ?>"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        View on GitHub ↗
+                    </a>
+
+                <?php endif; ?>
+
+            </article>
+
 
         <?php endforeach; ?>
 
@@ -477,80 +693,8 @@ require_once __DIR__
 
     <?php if (!$hasProjects): ?>
 
-        <p>
+        <p class="empty-state">
             No projects added yet.
-        </p>
-
-    <?php endif; ?>
-
-</section>
-
-
-<section id="skills">
-
-    <h2 class="sec-title">
-        Technical Skills
-    </h2>
-
-
-    <?php if (!empty($skills)): ?>
-
-        <?php
-        foreach ($skills as $skill):
-        ?>
-
-        <div class="s-skill">
-
-            <div class="s-skill-top">
-
-                <?= escape(
-                    $skill[
-                        'skill_name'
-                    ]
-                ) ?>
-
-                <span>
-
-                    <?= (int)
-                        $skill[
-                            'skill_level'
-                        ]
-                    ?>%
-
-                </span>
-
-            </div>
-
-            <div class="s-bar">
-
-                <div
-                    class="s-bar-fill"
-                    style="width:
-                    <?= max(
-                        0,
-                        min(
-                            100,
-                            (int)
-                            $skill[
-                                'skill_level'
-                            ]
-                        )
-                    ) ?>%;"
-                >
-                </div>
-
-            </div>
-
-        </div>
-
-        <?php endforeach; ?>
-
-
-    <?php else: ?>
-
-        <p>
-            No technical skills
-            added yet.
         </p>
 
     <?php endif; ?>
@@ -565,21 +709,21 @@ require_once __DIR__
 
 <?php else: ?>
 
-<main>
 
-    <p>
-        Profile information is
-        not available yet.
+<main class="resume-main">
+
+    <p class="empty-state">
+        Profile information is not available yet.
     </p>
 
 </main>
+
 
 <?php endif; ?>
 
 
 <?php
 
-require_once __DIR__
-    . '/../includes/footer.php';
+require_once __DIR__ . '/../includes/footer.php';
 
 ?>

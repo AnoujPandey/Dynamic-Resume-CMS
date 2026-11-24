@@ -92,15 +92,6 @@ require_once __DIR__ . '/../includes/header.php';
 
     <div class="header-body">
 
-        <div class="role-tag">
-
-            <span class="dot-live"></span>
-
-            Open to Internships &amp; Opportunities
-
-        </div>
-
-
         <h1>
             <?= escape($user['full_name']) ?>
         </h1>
@@ -120,21 +111,6 @@ require_once __DIR__ . '/../includes/header.php';
                 <?= escape($user['email']) ?>
             </a>
 
-
-            <a
-                class="contact-pill"
-                href="https://www.deu.ac.kr"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                Dong-eui University
-            </a>
-
-
-            <span class="contact-pill">
-                Busan, South Korea
-            </span>
-
         </div>
 
     </div>
@@ -142,57 +118,13 @@ require_once __DIR__ . '/../includes/header.php';
 </header>
 
 
-<nav class="resume-nav">
-
-    <a href="#objective">
-        Portfolio
-    </a>
-
-    <a href="#education">
-        Education
-    </a>
-
-    <a href="#experience">
-        Experience
-    </a>
-
-    <a href="#projects">
-        Projects
-    </a>
-
-    <a href="#skills">
-        Skills
-    </a>
-
-
-    <?php if (!empty($_SESSION['user_id'])): ?>
-
-        <a
-            href="admin.php"
-            class="admin-link"
-        >
-            Admin Dashboard
-        </a>
-
-    <?php else: ?>
-
-        <a
-            href="login.php"
-            class="admin-link"
-        >
-            Admin Login
-        </a>
-
-    <?php endif; ?>
-
-</nav>
+<?php renderNavigation('portfolio'); ?>
 
 
 <div class="layout">
 
 
 <aside class="resume-sidebar">
-
 
     <div
         class="side-block"
@@ -260,113 +192,6 @@ require_once __DIR__ . '/../includes/header.php';
 
     </div>
 
-
-    <div class="side-block">
-
-        <div class="side-heading">
-            Languages
-        </div>
-
-
-        <div class="lang-row">
-
-            <span>Nepali</span>
-
-            <span class="language-level">
-                Native
-            </span>
-
-        </div>
-
-
-        <div class="lang-row">
-
-            <span>English</span>
-
-            <span class="language-level">
-                Good
-            </span>
-
-        </div>
-
-
-        <div class="lang-row">
-
-            <span>Korean</span>
-
-            <span class="language-level">
-                Basic
-            </span>
-
-        </div>
-
-    </div>
-
-
-    <div class="side-block">
-
-        <div class="side-heading">
-            Soft Skills
-        </div>
-
-
-        <div class="tag-cloud">
-
-            <span class="tag">
-                Team Player
-            </span>
-
-            <span class="tag">
-                Problem Solving
-            </span>
-
-            <span class="tag">
-                Time Management
-            </span>
-
-            <span class="tag">
-                Adaptable
-            </span>
-
-            <span class="tag">
-                Detail-Oriented
-            </span>
-
-        </div>
-
-    </div>
-
-
-    <div class="side-block">
-
-        <div class="side-heading">
-            Interests
-        </div>
-
-
-        <div class="tag-cloud">
-
-            <span class="tag">
-                Web Development
-            </span>
-
-            <span class="tag">
-                Data Analysis
-            </span>
-
-            <span class="tag">
-                Mathematics
-            </span>
-
-            <span class="tag">
-                Graphic Design
-            </span>
-
-        </div>
-
-    </div>
-
-
 </aside>
 
 
@@ -430,24 +255,20 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <span class="tl-date">
 
-                        <?= escape(
-                            date(
-                                'Y',
-                                strtotime(
-                                    $entry['start_date']
-                                )
+                        <?= date(
+                            'Y',
+                            strtotime(
+                                $entry['start_date']
                             )
                         ) ?>
 
                         –
 
                         <?= !empty($entry['end_date'])
-                            ? escape(
-                                date(
-                                    'Y',
-                                    strtotime(
-                                        $entry['end_date']
-                                    )
+                            ? date(
+                                'Y',
+                                strtotime(
+                                    $entry['end_date']
                                 )
                             )
                             : 'Present'
@@ -533,24 +354,20 @@ require_once __DIR__ . '/../includes/header.php';
 
                 <span class="exp-date-badge">
 
-                    <?= escape(
-                        date(
-                            'M Y',
-                            strtotime(
-                                $entry['start_date']
-                            )
+                    <?= date(
+                        'M Y',
+                        strtotime(
+                            $entry['start_date']
                         )
                     ) ?>
 
                     –
 
                     <?= !empty($entry['end_date'])
-                        ? escape(
-                            date(
-                                'M Y',
-                                strtotime(
-                                    $entry['end_date']
-                                )
+                        ? date(
+                            'M Y',
+                            strtotime(
+                                $entry['end_date']
                             )
                         )
                         : 'Present'
@@ -645,12 +462,10 @@ require_once __DIR__ . '/../includes/header.php';
 
                     ·
 
-                    <?= escape(
-                        date(
-                            'Y',
-                            strtotime(
-                                $entry['start_date']
-                            )
+                    <?= date(
+                        'Y',
+                        strtotime(
+                            $entry['start_date']
                         )
                     ) ?>
 

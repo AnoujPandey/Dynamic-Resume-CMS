@@ -415,179 +415,420 @@ require_once __DIR__ . '/../includes/header.php';
 
     <section>
 
-        <h2>
-            Resume Entries
-        </h2>
+    <h2>
+        Resume Entries
+    </h2>
 
 
-        <?php if (!empty($entries)): ?>
+    <?php
+
+    $experienceEntries = [];
+    $educationEntries = [];
+    $projectEntries = [];
 
 
-            <div class="table-wrap">
+    foreach ($entries as $entry) {
 
-                <table>
+        if ($entry['entry_type'] === 'experience') {
+            $experienceEntries[] = $entry;
+        }
 
-                    <thead>
+        if ($entry['entry_type'] === 'education') {
+            $educationEntries[] = $entry;
+        }
 
-                        <tr>
+        if ($entry['entry_type'] === 'project') {
+            $projectEntries[] = $entry;
+        }
+    }
 
-                            <th>
-                                Type
-                            </th>
-
-                            <th>
-                                Title
-                            </th>
-
-                            <th>
-                                Organization
-                            </th>
-
-                            <th>
-                                Start Date
-                            </th>
-
-                            <th>
-                                End Date
-                            </th>
-
-                            <th>
-                                Actions
-                            </th>
-
-                        </tr>
-
-                    </thead>
+    ?>
 
 
-                    <tbody>
+    <div class="admin-actions">
+
+        <a href="entry_form.php">
+            Add New Entry
+        </a>
+
+    </div>
 
 
-                    <?php foreach (
-                        $entries
-                        as $entry
-                    ): ?>
+    <!-- EXPERIENCE -->
+
+    <h3 class="admin-section-title">
+        Experience
+    </h3>
 
 
-                        <tr>
+    <?php if (!empty($experienceEntries)): ?>
 
-                            <td>
+        <div class="table-wrap">
 
-                                <?= escape(
-                                    ucfirst(
-                                        $entry['entry_type']
-                                    )
-                                ) ?>
+            <table>
 
-                            </td>
+                <thead>
 
+                    <tr>
 
-                            <td>
+                        <th>
+                            Job Title
+                        </th>
 
-                                <?= escape(
-                                    $entry['title']
-                                ) ?>
+                        <th>
+                            Company
+                        </th>
 
-                            </td>
+                        <th>
+                            Start Date
+                        </th>
 
+                        <th>
+                            End Date
+                        </th>
 
-                            <td>
+                        <th>
+                            Actions
+                        </th>
 
-                                <?= escape(
-                                    $entry['organization']
-                                ) ?>
+                    </tr>
 
-                            </td>
-
-
-                            <td>
-
-                                <?= escape(
-                                    $entry['start_date']
-                                ) ?>
-
-                            </td>
+                </thead>
 
 
-                            <td>
+                <tbody>
 
-                                <?= !empty(
-                                    $entry['end_date']
-                                )
-                                    ? escape(
-                                        $entry['end_date']
-                                    )
-                                    : 'Present'
-                                ?>
+                <?php foreach ($experienceEntries as $entry): ?>
 
-                            </td>
+                    <tr>
+
+                        <td>
+                            <?= escape($entry['title']) ?>
+                        </td>
+
+                        <td>
+                            <?= escape($entry['organization']) ?>
+                        </td>
+
+                        <td>
+                            <?= escape($entry['start_date']) ?>
+                        </td>
+
+                        <td>
+                            <?= !empty($entry['end_date'])
+                                ? escape($entry['end_date'])
+                                : 'Present'
+                            ?>
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="entry_form.php?id=<?= (int) $entry['id'] ?>"
+                            >
+                                Edit
+                            </a>
 
 
-                            <td>
+                            <form
+                                method="post"
+                                action="delete_entry.php"
+                                class="inline-form"
+                                onsubmit="return confirm('Are you sure you want to delete this experience?');"
+                            >
 
-                                <a
-                                    href="entry_form.php?id=<?= (int) $entry['id'] ?>"
+                                <input
+                                    type="hidden"
+                                    name="id"
+                                    value="<?= (int) $entry['id'] ?>"
                                 >
-                                    Edit
-                                </a>
 
-
-                                <form
-                                    method="post"
-                                    action="delete_entry.php"
-                                    class="inline-form"
-                                    onsubmit="return confirm('Are you sure you want to delete this entry?');"
+                                <button
+                                    type="submit"
+                                    class="delete-button"
                                 >
+                                    Delete
+                                </button>
 
-                                    <input
-                                        type="hidden"
-                                        name="id"
-                                        value="<?= (int) $entry['id'] ?>"
-                                    >
+                            </form>
 
+                        </td>
 
-                                    <button
-                                        type="submit"
-                                        class="delete-button"
-                                    >
-                                        Delete
-                                    </button>
+                    </tr>
 
-                                </form>
+                <?php endforeach; ?>
 
-                            </td>
+                </tbody>
 
-                        </tr>
-
-
-                    <?php endforeach; ?>
-
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-
-        <?php else: ?>
-
-            <p class="empty-state">
-                No resume entries available yet.
-            </p>
-
-        <?php endif; ?>
-
-
-        <div class="admin-actions">
-
-            <a href="entry_form.php">
-                Add New Entry
-            </a>
+            </table>
 
         </div>
 
-    </section>
+
+    <?php else: ?>
+
+        <p class="empty-state">
+            No experience entries available.
+        </p>
+
+    <?php endif; ?>
+
+
+
+    <!-- EDUCATION -->
+
+    <h3 class="admin-section-title">
+        Education
+    </h3>
+
+
+    <?php if (!empty($educationEntries)): ?>
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Degree / Program
+                        </th>
+
+                        <th>
+                            School / University
+                        </th>
+
+                        <th>
+                            Start Date
+                        </th>
+
+                        <th>
+                            End Date
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                <?php foreach ($educationEntries as $entry): ?>
+
+                    <tr>
+
+                        <td>
+                            <?= escape($entry['title']) ?>
+                        </td>
+
+                        <td>
+                            <?= escape($entry['organization']) ?>
+                        </td>
+
+                        <td>
+                            <?= escape($entry['start_date']) ?>
+                        </td>
+
+                        <td>
+                            <?= !empty($entry['end_date'])
+                                ? escape($entry['end_date'])
+                                : 'Present'
+                            ?>
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="entry_form.php?id=<?= (int) $entry['id'] ?>"
+                            >
+                                Edit
+                            </a>
+
+
+                            <form
+                                method="post"
+                                action="delete_entry.php"
+                                class="inline-form"
+                                onsubmit="return confirm('Are you sure you want to delete this education entry?');"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="id"
+                                    value="<?= (int) $entry['id'] ?>"
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="delete-button"
+                                >
+                                    Delete
+                                </button>
+
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                <?php endforeach; ?>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    <?php else: ?>
+
+        <p class="empty-state">
+            No education entries available.
+        </p>
+
+    <?php endif; ?>
+
+
+
+    <!-- PROJECTS -->
+
+    <h3 class="admin-section-title">
+        Projects
+    </h3>
+
+
+    <?php if (!empty($projectEntries)): ?>
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Project Name
+                        </th>
+
+                        <th>
+                            Technologies / Institution
+                        </th>
+
+                        <th>
+                            Start Date
+                        </th>
+
+                        <th>
+                            GitHub
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                <?php foreach ($projectEntries as $entry): ?>
+
+                    <tr>
+
+                        <td>
+                            <?= escape($entry['title']) ?>
+                        </td>
+
+                        <td>
+                            <?= escape($entry['organization']) ?>
+                        </td>
+
+                        <td>
+                            <?= escape($entry['start_date']) ?>
+                        </td>
+
+                        <td>
+
+                            <?php if (!empty($entry['github_url'])): ?>
+
+                                <a
+                                    href="<?= escape($entry['github_url']) ?>"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    GitHub
+                                </a>
+
+                            <?php else: ?>
+
+                                —
+
+                            <?php endif; ?>
+
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="entry_form.php?id=<?= (int) $entry['id'] ?>"
+                            >
+                                Edit
+                            </a>
+
+
+                            <form
+                                method="post"
+                                action="delete_entry.php"
+                                class="inline-form"
+                                onsubmit="return confirm('Are you sure you want to delete this project?');"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="id"
+                                    value="<?= (int) $entry['id'] ?>"
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="delete-button"
+                                >
+                                    Delete
+                                </button>
+
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                <?php endforeach; ?>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+    <?php else: ?>
+
+        <p class="empty-state">
+            No project entries available.
+        </p>
+
+    <?php endif; ?>
+
+</section>
 
 </main>
 

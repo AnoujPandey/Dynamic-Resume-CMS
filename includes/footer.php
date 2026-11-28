@@ -1,15 +1,6 @@
 <footer>
-
-    <p>
-        &copy;
-        <?= date('Y') ?>
-        @AnoujPandey
-    </p>
-
+    <p>&copy; <?= date('Y') ?> @AnoujPandey</p>
 </footer>
-
 </div>
-
 </body>
-
 </html>

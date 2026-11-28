@@ -1,248 +1,162 @@
 <?php
 
+// Escape database and form values before displaying them in HTML.
 function escape($value): string
 {
-    return htmlspecialchars(
-        (string) $value,
-        ENT_QUOTES,
-        'UTF-8'
-    );
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-
+// Redirect visitors who have not logged in.
 function requireLogin(): void
 {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
-
     if (empty($_SESSION['user_id'])) {
         header('Location: login.php');
         exit;
     }
 }
 
-
-function processAvatarUpload(
-    array $file,
-    ?string $oldAvatarPath = null
-): array {
-    $maxSize = 2097152;
-
-    if (
-        !isset($file['error'])
-        || $file['error'] !== UPLOAD_ERR_OK
-    ) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Please select a valid image.'
-        ];
+// Extra security: each POST form includes a token stored in the session.
+function csrfToken(): string
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
+    return $_SESSION['csrf_token'];
+}
 
-    if (($file['size'] ?? 0) > $maxSize) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Image must be smaller than 2 MB.'
-        ];
+function verifyCsrfToken(): void
+{
+    $token = $_POST['csrf_token'] ?? '';
+    if (!is_string($token) || empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $token)) {
+        http_response_code(403);
+        exit('Invalid security token.');
+    }
+}
+
+// Normal form fields must contain strings, not arrays.
+function validatePostFields(): void
+{
+    foreach ($_POST as $value) {
+        if (!is_string($value)) {
+            http_response_code(400);
+            exit('Invalid form data.');
+        }
+    }
+}
+
+// Compare the parsed date with the input to reject impossible dates.
+function isValidDate(string $date): bool
+{
+    if (!preg_match('/^[1-9][0-9]{3}-[0-9]{2}-[0-9]{2}$/D', $date)) {
+        return false;
+    }
+    $parsed = DateTime::createFromFormat('!Y-m-d', $date);
+    return $parsed !== false && $parsed->format('Y-m-d') === $date;
+}
+
+// Project links are optional, but must point to GitHub over HTTPS.
+function isValidGithubUrl(string $url): bool
+{
+    if (mb_strlen($url) > 255 || !filter_var($url, FILTER_VALIDATE_URL)) {
+        return false;
+    }
+    $parts = parse_url($url);
+    return is_array($parts) && strtolower($parts['scheme'] ?? '') === 'https' &&
+        strtolower($parts['host'] ?? '') === 'github.com' &&
+        !isset($parts['user']) && !isset($parts['pass']);
+}
+
+// Return a consistent result when an image cannot be accepted.
+function uploadError(string $message): array
+{
+    return ['success' => false, 'path' => null, 'error' => $message];
+}
+
+// Validate the uploaded file, then create and save a real GD thumbnail.
+function processAvatarUpload(array $file): array
+{
+    if (($file['error'] ?? null) !== UPLOAD_ERR_OK) {
+        return uploadError('Please select a valid image.');
+    }
+    if (!isset($file['size']) || !is_int($file['size']) ||
+        $file['size'] <= 0 || $file['size'] > 2097152) {
+        return uploadError('Image must be no larger than 2 MB.');
     }
 
     $tmpName = $file['tmp_name'] ?? '';
-
-    if (
-        $tmpName === ''
-        || !is_uploaded_file($tmpName)
-    ) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Invalid uploaded file.'
-        ];
+    if (!is_string($tmpName) || !is_uploaded_file($tmpName)) {
+        return uploadError('Invalid uploaded file.');
     }
 
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
-
     if (!$finfo) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Unable to inspect the image.'
-        ];
+        return uploadError('Unable to inspect the image.');
     }
-
-    $mimeType = finfo_file(
-        $finfo,
-        $tmpName
-    );
-
+    $mime = finfo_file($finfo, $tmpName);
     finfo_close($finfo);
-
-    if (
-        !in_array(
-            $mimeType,
-            ['image/jpeg', 'image/png'],
-            true
-        )
-    ) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Only JPEG and PNG images are allowed.'
-        ];
+    if (!in_array($mime, ['image/jpeg', 'image/png'], true)) {
+        return uploadError('Only JPEG and PNG images are allowed.');
     }
 
-    if ($mimeType === 'image/jpeg') {
-        $sourceImage =
-            imagecreatefromjpeg($tmpName);
+    // Limit image dimensions before decoding to reduce memory use.
+    $dimensions = @getimagesize($tmpName);
+    if (!$dimensions || $dimensions[0] > 4096 || $dimensions[1] > 4096) {
+        return uploadError('Invalid image or image exceeds 4096 pixels.');
+    }
+
+    $uploadDirectory = dirname(__DIR__) . '/uploads/';
+    if (!is_dir($uploadDirectory) || !is_writable($uploadDirectory)) {
+        return uploadError('Upload directory is not writable.');
+    }
+
+    if ($mime === 'image/jpeg') {
+        $source = @imagecreatefromjpeg($tmpName);
     } else {
-        $sourceImage =
-            imagecreatefrompng($tmpName);
+        $source = @imagecreatefrompng($tmpName);
+    }
+    if (!$source) {
+        return uploadError('Could not process the image.');
     }
 
-    if (!$sourceImage) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Could not process the image.'
-        ];
-    }
-
-    $sourceWidth = imagesx($sourceImage);
-    $sourceHeight = imagesy($sourceImage);
-
-    $thumbnail =
-        imagecreatetruecolor(150, 150);
-
+    $thumbnail = imagecreatetruecolor(150, 150);
     if (!$thumbnail) {
-        imagedestroy($sourceImage);
-
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Could not create thumbnail.'
-        ];
+        imagedestroy($source);
+        return uploadError('Could not create thumbnail.');
     }
 
-    // White background for PNG transparency
-    $white = imagecolorallocate(
-        $thumbnail,
-        255,
-        255,
-        255
-    );
+    // Crop the central square to avoid stretching the photo.
+    $width = imagesx($source);
+    $height = imagesy($source);
+    $crop = min($width, $height);
+    $x = (int) (($width - $crop) / 2);
+    $y = (int) (($height - $crop) / 2);
+    $white = imagecolorallocate($thumbnail, 255, 255, 255);
+    imagefill($thumbnail, 0, 0, $white);
+    $resized = imagecopyresampled($thumbnail, $source, 0, 0, $x, $y, 150, 150, $crop, $crop);
 
-    imagefill(
-        $thumbnail,
-        0,
-        0,
-        $white
-    );
-
-    $cropSize = min(
-        $sourceWidth,
-        $sourceHeight
-    );
-
-    $sourceX = (int) (
-        ($sourceWidth - $cropSize) / 2
-    );
-
-    $sourceY = (int) (
-        ($sourceHeight - $cropSize) / 2
-    );
-
-    imagecopyresampled(
-        $thumbnail,
-        $sourceImage,
-        0,
-        0,
-        $sourceX,
-        $sourceY,
-        150,
-        150,
-        $cropSize,
-        $cropSize
-    );
-
-    $filename =
-        bin2hex(random_bytes(16))
-        . '.jpg';
-
-    $projectRoot = dirname(__DIR__);
-
-    $uploadDirectory =
-        $projectRoot . '/uploads/';
-
-    if (
-        !is_dir($uploadDirectory)
-        || !is_writable($uploadDirectory)
-    ) {
-        imagedestroy($sourceImage);
-        imagedestroy($thumbnail);
-
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Upload directory is not writable.'
-        ];
-    }
-
-    $fullPath =
-        $uploadDirectory . $filename;
-
-    $saved = imagejpeg(
-        $thumbnail,
-        $fullPath,
-        90
-    );
-
-    imagedestroy($sourceImage);
+    // Never use the original filename supplied by the browser.
+    $filename = bin2hex(random_bytes(16)) . '.jpg';
+    $path = $uploadDirectory . $filename;
+    $saved = $resized && @imagejpeg($thumbnail, $path, 90);
+    imagedestroy($source);
     imagedestroy($thumbnail);
 
-    if (!$saved) {
-        return [
-            'success' => false,
-            'path' => null,
-            'error' => 'Could not save thumbnail.'
-        ];
+    if (!$saved || !is_file($path) || filesize($path) === 0) {
+        deleteAvatar('uploads/' . $filename);
+        return uploadError('Could not save thumbnail.');
     }
+    return ['success' => true, 'path' => 'uploads/' . $filename, 'error' => ''];
+}
 
-    // Delete previous uploaded avatar
-    if (
-        !empty($oldAvatarPath)
-        && str_starts_with(
-            $oldAvatarPath,
-            'uploads/'
-        )
-    ) {
-        $oldFile =
-            $projectRoot
-            . '/'
-            . $oldAvatarPath;
-
-        $uploadRealPath =
-            realpath($uploadDirectory);
-
-        $oldRealPath =
-            realpath($oldFile);
-
-        if (
-            $uploadRealPath !== false
-            && $oldRealPath !== false
-            && str_starts_with(
-                $oldRealPath,
-                $uploadRealPath
-            )
-            && is_file($oldFile)
-        ) {
-            unlink($oldFile);
-        }
+// Only delete files matching the generated avatar naming pattern.
+function deleteAvatar(?string $path): void
+{
+    if ($path === null || !preg_match('~^uploads/[a-f0-9]{32}\.jpg$~D', $path)) {
+        return;
     }
-
-    return [
-        'success' => true,
-        'path' => 'uploads/' . $filename,
-        'error' => ''
-    ];
+    $file = dirname(__DIR__) . '/' . $path;
+    if (is_file($file) && !is_link($file)) {
+        @unlink($file);
+    }
 }

@@ -39,7 +39,6 @@ body {
     line-height: 1.6;
 }
 
-
 /* PAGE */
 
 .page {
@@ -51,7 +50,6 @@ body {
     overflow: hidden;
     box-shadow: 0 8px 28px rgba(15, 37, 64, 0.15);
 }
-
 
 /* HEADER */
 
@@ -93,25 +91,6 @@ body {
     font-size: 12px;
 }
 
-.role-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 10px;
-    padding: 4px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 15px;
-    background: rgba(255, 255, 255, 0.08);
-    font-size: 10px;
-}
-
-.dot-live {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #4ade80;
-}
-
 .contact-grid {
     display: flex;
     flex-wrap: wrap;
@@ -132,7 +111,6 @@ a.contact-pill:hover {
     color: white;
     background: rgba(255, 255, 255, 0.14);
 }
-
 
 /* NAVIGATION */
 
@@ -157,13 +135,11 @@ a.contact-pill:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-
 /* LAYOUT */
 
 .layout {
     display: flex;
 }
-
 
 /* SIDEBAR */
 
@@ -187,7 +163,6 @@ a.contact-pill:hover {
     letter-spacing: 1.3px;
     text-transform: uppercase;
 }
-
 
 /* SKILLS */
 
@@ -224,38 +199,6 @@ a.contact-pill:hover {
     color: rgba(255, 255, 255, 0.55);
     font-size: 10px;
 }
-
-
-/* LANGUAGES */
-
-.lang-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 10px;
-}
-
-.language-level {
-    color: rgba(255, 255, 255, 0.45);
-}
-
-
-/* TAGS */
-
-.tag-cloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.tag {
-    padding: 3px 7px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 9px;
-}
-
 
 /* MAIN CONTENT */
 
@@ -296,7 +239,6 @@ a.contact-pill:hover {
     background: var(--line);
 }
 
-
 /* OBJECTIVE */
 
 .objective-card {
@@ -307,7 +249,6 @@ a.contact-pill:hover {
     border-radius: 8px;
     font-size: 11px;
 }
-
 
 /* EDUCATION */
 
@@ -375,7 +316,6 @@ a.contact-pill:hover {
     font-size: 10px;
 }
 
-
 /* EXPERIENCE */
 
 .exp-card {
@@ -416,7 +356,6 @@ a.contact-pill:hover {
 .exp-card p {
     font-size: 10px;
 }
-
 
 /* PROJECTS */
 
@@ -478,7 +417,6 @@ a.contact-pill:hover {
     background: var(--navy);
 }
 
-
 /* EMPTY STATES */
 
 .empty-state {
@@ -489,7 +427,6 @@ a.contact-pill:hover {
     color: var(--muted);
     font-size: 10px;
 }
-
 
 /* ADMIN / LOGIN */
 
@@ -620,7 +557,6 @@ th {
     background: #b91c1c;
 }
 
-
 /* FOOTER */
 
 footer {
@@ -633,7 +569,6 @@ footer {
 footer p {
     font-size: 9px;
 }
-
 
 /* MOBILE */
 
@@ -705,3 +640,13 @@ footer p {
 .admin-link:hover {
     background: rgba(255, 255, 255, 0.12);
 }
+
+/* A POST logout button styled like the previous navigation link. */
+.link-button {
+    background: none;
+    color: var(--blue);
+    padding: 0;
+    font: inherit;
+    text-decoration: underline;
+}
+.link-button:hover { background: none; color: var(--navy); }
